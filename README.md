@@ -83,6 +83,37 @@ pip install -r requirements.txt
 
 ***
 
+#### Training Data
+
+* Yonsei Stress Image Database
+
+> * The database we used can be found here: https://ieee-dataport.org/open-access/yonsei-stress-image-database
+
+***
+
+#### Training Model
+
+> * Step1. 데이터베이스 파일들의 파일명을 #(subject_num)-#(label_num).txt 형태로 만들어 데이터베이스 폴더 안에 file_list 폴더 안에 넣는다.
+> * Step2. sr_utils.py 파일의 윗 부분에 데이터베이스 폴더의 위치를 변경한다.
+> * Step3. sr_train.py 파일에서 main 함수의 중간 부분에 학습 모델이 저장되는 경로인 model_path라는 변수가 있는데 원하는 경로로 변경한다. 
+> * Step4. sr_train.py를 실행해 학습을 시작하고, 학습된 모델을 model_path의 경로에서 확인한다. 
+
+***
+
+#### Validation Metrics Calculation
+
+> * Validation Metric으로 Accuracy(%)를 사용한다.
+> * Accuracy는 전체 test clip 중에 정답을 맞춘 clip의 개수를 전체 test clip의 개수로 나눈 후 100을 곱하여 얻는다.
+> * 학습된 모델의 Test Accuracy 값은 모델의 파일명에서 확인할 수 있다. (ex: model name: SR_model_72.34%.ckpt -> Test Accuracy: 72.34%)
+
+***
+
+#### Specific Scenario Issues
+
+> * 제한된 실험 환경에서 취득한 데이터베이스로 학습하였기 때문에 일상 생활 환경에서 잘 동작하지 않을 수 있다.
+
+***
+
 #### HTTP-server API description
 
 > * Path
@@ -126,15 +157,15 @@ pip install -r requirements.txt
 > * `mtcnn/` - 얼굴 검출할 때 사용되는 코드 및 파일들이 저장되어 있음
 > * `APITestData/` - API가 정상적으로 작동하는지 확인하기 위한 Data가 저장되어 있음
 > * `requirements.txt` - Python의 패키지 환경이 저장되어 있는 파일
-> * `SR_client.py` - 클라이언트에서 실행하는 파일
-> * `SR_ResNet.py` - 모델이 저장되어 있는 파일
-> * `SR_server.py` - command prompt에서 사용하기 위해 서버에서 실행하는 파일
-> * `SR_server_code.py` - 서버에서 사용하는 함수들이 저장되어 있는 파일
-> * `SR_server_web.py` - Web 상에서 테스트하기 위해 서버에서 실행하는 파일
-> * `SR_test.py` - 학습한 모델을 테스트하는 파일
-> * `SR_train.py` - 모델을 학습할 때 사용하는 파일
-> * `SR_utils.py` - 모델을 학습 및 테스트할 때 사용하는 기타 함수들이 저장되어 있는 파일
-> * `SR_APITest_Script.py` - API가 정상적으로 작동하는지 APITestData 내 Data로 Test하는 파일
-> * `SR_API_function.py` - 다른 API에 적용하기 쉽도록 pre-processing, model loading, feature extraction, prediction 기능을 가진 함수들을 모아놓은 파일
+> * `sr_client.py` - 클라이언트에서 실행하는 파일
+> * `sr_resnet.py` - 모델이 저장되어 있는 파일
+> * `sr_server.py` - command prompt에서 사용하기 위해 서버에서 실행하는 파일
+> * `sr_server_code.py` - 서버에서 사용하는 함수들이 저장되어 있는 파일
+> * `sr_server_web.py` - Web 상에서 테스트하기 위해 서버에서 실행하는 파일
+> * `sr_test.py` - 학습한 모델을 테스트하는 파일
+> * `sr_train.py` - 모델을 학습할 때 사용하는 파일
+> * `sr_utils.py` - 모델을 학습 및 테스트할 때 사용하는 기타 함수들이 저장되어 있는 파일
+> * `sr_apitest_script.py` - API가 정상적으로 작동하는지 APITestData 내 Data로 Test하는 파일
+> * `sr_api_function.py` - 다른 API에 적용하기 쉽도록 pre-processing, model loading, feature extraction, prediction 기능을 가진 함수들을 모아놓은 파일
 
 ***

@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+"""This is the module where the network is declared."""
 import tensorflow as tf
 import tensorflow.contrib as tf_contrib
 
@@ -5,54 +7,64 @@ import tensorflow.contrib as tf_contrib
 weight_init = tf_contrib.layers.variance_scaling_initializer()
 weight_regularizer = tf_contrib.layers.l2_regularizer(0.0001)
 
-def fully_conneted(x, units, use_bias=True, scope='fully_0'):
+def fully_conneted(feature, units, use_bias=True, scope='fully_0'):
+    """Fully connected layer function."""
     with tf.variable_scope(scope):
-        x = tf.layers.dense(x, units=units, kernel_initializer=weight_init, kernel_regularizer=weight_regularizer, use_bias=use_bias)
+        feature = tf.layers.dense(feature, units=units, kernel_initializer=weight_init,
+                            kernel_regularizer=weight_regularizer, use_bias=use_bias)
 
-        return x
+        return feature
 
-def global_avg_pooling(x):
-    gap = tf.reduce_mean(x, axis=[1, 2], keepdims=True)
+def global_avg_pooling(feature):
+    """Global average pooling layer function."""
+    gap = tf.reduce_mean(feature, axis=[1, 2], keepdims=True)
     return gap
 
-def relu(x):
-    return tf.nn.relu(x)
+def relu(feature):
+    """ReLU layer function."""
+    return tf.nn.relu(feature)
 
-def batch_norm(x, is_training=True, scope='batch_norm'):
-    return tf_contrib.layers.batch_norm(x,
+def batch_norm(feature, is_training=True, scope='batch_norm'):
+    """Batch norm layer function."""
+    return tf_contrib.layers.batch_norm(feature,
                                         decay=0.9, epsilon=1e-05,
                                         center=True, scale=True, updates_collections=None,
                                         is_training=is_training, scope=scope)
 
-def conv(x, channels, kernel=4, stride=2, padding='SAME', use_bias=True, scope='conv_0'):
+def conv(feature, channels, kernel=4, stride=2, padding='SAME', use_bias=True, scope='conv_0'):
+    """Convolution layer function."""
     with tf.variable_scope(scope):
-        x = tf.layers.conv2d(inputs=x, filters=channels,
+        feature = tf.layers.conv2d(inputs=feature, filters=channels,
                              kernel_size=kernel, kernel_initializer=weight_init,
                              kernel_regularizer=weight_regularizer,
                              strides=stride, use_bias=use_bias, padding=padding)
 
-        return x
+        return feature
 
-def resblock(x_init, channels, is_training=True, use_bias=True, downsample=False, scope='resblock') :
+def resblock(x_init, channels, is_training=True, use_bias=True,
+             downsample=False, scope='resblock') :
+    """Residual block."""
     with tf.variable_scope(scope) :
 
-        x = batch_norm(x_init, is_training, scope='batch_norm_0')
-        x = relu(x)
+        feature = batch_norm(x_init, is_training, scope='batch_norm_0')
+        feature = relu(feature)
 
         if downsample :
-            x = conv(x, channels, kernel=3, stride=2, use_bias=use_bias, scope='conv_0')
-            x_init = conv(x_init, channels, kernel=1, stride=2, use_bias=use_bias, scope='conv_init')
+            feature = conv(feature, channels, kernel=3, stride=2, use_bias=use_bias, scope='conv_0')
+            x_init = conv(x_init, channels, kernel=1, stride=2,
+                          use_bias=use_bias, scope='conv_init')
 
         else :
-            x = conv(x, channels, kernel=3, stride=1, use_bias=use_bias, scope='conv_0')
+            feature = conv(feature, channels, kernel=3, stride=1, use_bias=use_bias, scope='conv_0')
 
-        x = batch_norm(x, is_training, scope='batch_norm_1')
-        x = relu(x)
-        x = conv(x, channels, kernel=3, stride=1, use_bias=use_bias, scope='conv_1')
+        feature = batch_norm(feature, is_training, scope='batch_norm_1')
+        feature = relu(feature)
+        feature = conv(feature, channels, kernel=3, stride=1, use_bias=use_bias, scope='conv_1')
 
-    return x
+    return feature + x_init
 
 def spatial_attention(input_feature, name):
+    """Spatial attention module."""
     kernel_size = 7
     kernel_initializer = tf.contrib.layers.variance_scaling_initializer()
     with tf.variable_scope(name):
@@ -78,6 +90,7 @@ def spatial_attention(input_feature, name):
     return input_feature * concat
 
 def temporal_attention(input_feature, keep_prob, name):
+    """Temporal attention module."""
     with tf.variable_scope(name):
         residual = input_feature
 
@@ -88,53 +101,60 @@ def temporal_attention(input_feature, keep_prob, name):
         concat_feature_stack = tf.stack(concat_feature, axis=1)
         concat_feature_reshape = tf.reshape(concat_feature_stack, [-1, 1024])
 
-        ta = tf.nn.dropout(concat_feature_reshape, keep_prob)
-        ta = tf.layers.dense(ta, units=1024, kernel_initializer=weight_init, kernel_regularizer=weight_regularizer,
+        temporal_att = tf.nn.dropout(concat_feature_reshape, keep_prob)
+        temporal_att = tf.layers.dense(temporal_att, units=1024, kernel_initializer=weight_init,
+                             kernel_regularizer=weight_regularizer,
                              use_bias=False, activation=tf.nn.relu)
-        ta = tf.layers.dense(ta, units=1024, kernel_initializer=weight_init, kernel_regularizer=weight_regularizer,
+        temporal_att = tf.layers.dense(temporal_att, units=1024, kernel_initializer=weight_init,
+                             kernel_regularizer=weight_regularizer,
                              use_bias=False, activation=tf.nn.relu)
-        ta = tf.layers.dense(ta, units=1, kernel_initializer=weight_init, kernel_regularizer=weight_regularizer,
+        temporal_att = tf.layers.dense(temporal_att, units=1, kernel_initializer=weight_init,
+                             kernel_regularizer=weight_regularizer,
                              use_bias=False, activation=tf.nn.sigmoid)
 
-        ta_reshape = tf.reshape(ta, [-1, 48, 1])
+        ta_reshape = tf.reshape(temporal_att, [-1, 48, 1])
         ta_x = input_feature * ta_reshape
         out = residual + ta_x
 
     return input_feature * out
 
 def network(feature_maps, keep_prob=1.0, is_training=True, reuse=tf.AUTO_REUSE):
+    """Residual network module."""
     with tf.variable_scope("retrain_net", reuse=reuse):
-        x = resblock(feature_maps, channels=512, is_training=is_training, downsample=True,
+        feature = resblock(feature_maps, channels=512, is_training=is_training, downsample=True,
                             scope='resblock_3_0')
-        x = resblock(x, channels=512, is_training=is_training, downsample=False,
+        feature = resblock(feature, channels=512, is_training=is_training, downsample=False,
                             scope='resblock_3_1')
-        x = resblock(x, channels=512, is_training=is_training, downsample=False,
+        feature = resblock(feature, channels=512, is_training=is_training, downsample=False,
                             scope='resblock_3_2')
 
-        x = batch_norm(x, is_training, scope='batch_norm')
-        x = relu(x)
+        feature = batch_norm(feature, is_training, scope='batch_norm')
+        feature = relu(feature)
 
-        residual = x
-        x = spatial_attention(x, name='sa') * x
-        x += residual
-        x = relu(x)
+        residual = feature
+        feature = spatial_attention(feature, name='sa') * feature
+        feature += residual
+        feature = relu(feature)
 
-        x = global_avg_pooling(x)
+        feature = global_avg_pooling(feature)
 
-        x = tf.reshape(x, [-1, 48, 512])
-        x = temporal_attention(x, keep_prob=keep_prob, name='ta')
+        feature = tf.reshape(feature, [-1, 48, 512])
+        feature = temporal_attention(feature, keep_prob=keep_prob, name='ta')
 
-        final_feature = tf.reduce_mean(x, axis=[1], keepdims=False)
+        final_feature = tf.reduce_mean(feature, axis=[1], keepdims=False)
         logits = fully_conneted(final_feature, 3)
 
     return logits, final_feature
 
 def cross_entropy_loss(logit, label):
-    loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=label, logits=logit))
+    """Cross entropy loss function."""
+    loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=label,
+                                                                     logits=logit))
 
     return loss
 
 def calculate_accuracy(logit, label, name) :
+    """Accuracy calculation function."""
     prediction = tf.equal(tf.argmax(logit, -1), tf.argmax(label, -1))
     accuracy = tf.reduce_mean(tf.cast(prediction, tf.float32), name=name)
 

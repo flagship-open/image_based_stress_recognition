@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+"""This is a module that tests the learned stress recognition model."""
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -6,19 +8,20 @@ from __future__ import print_function
 import argparse
 import sys
 import re
-from SR_utils import *
-from SR_ResNet import *
+from sr_utils import *
+from sr_resnet import *
 
 
 def load_model(model):
+    """This is a function that loads the trained model."""
     # Check if the model is a model directory (containing a metagraph and a checkpoint file)
     #  or if it is a protobuf file with a frozen graph
     model_exp = os.path.expanduser(model)
-    if (os.path.isfile(model_exp)):
+    if os.path.isfile(model_exp):
         print('Model filename: %s' % model_exp)
-        with tf.gfile.FastGFile(model_exp, 'rb') as f:
+        with tf.gfile.FastGFile(model_exp, 'rb') as f_l:
             graph_def = tf.GraphDef()
-            graph_def.ParseFromString(f.read())
+            graph_def.ParseFromString(f_l.read())
             tf.import_graph_def(graph_def, name='')
     else:
         print('Model directory: %s' % model_exp)
@@ -32,12 +35,14 @@ def load_model(model):
 
 
 def get_model_filenames(model_dir):
+    """This is a function that gets the model's file name."""
     files = os.listdir(model_dir)
     meta_files = [s for s in files if s.endswith('.meta')]
     if len(meta_files) == 0:
         raise ValueError('No meta file found in the model directory (%s)' % model_dir)
-    elif len(meta_files) > 1:
-        raise ValueError('There should not be more than one meta file in the model directory (%s)' % model_dir)
+    if len(meta_files) > 1:
+        raise ValueError('There should not be more than one meta '
+                         'file in the model directory (%s)' % model_dir)
     meta_file = meta_files[0]
     ckpt = tf.train.get_checkpoint_state(model_dir)
     if ckpt and ckpt.model_checkpoint_path:
@@ -46,8 +51,8 @@ def get_model_filenames(model_dir):
 
     meta_files = [s for s in files if '.ckpt' in s]
     max_step = -1
-    for f in files:
-        step_str = re.match(r'(^model-[\w\- ]+.ckpt-(\d+))', f)
+    for file_path in files:
+        step_str = re.match(r'(^model-[\w\- ]+.ckpt-(\d+))', file_path)
         if step_str is not None and len(step_str.groups()) >= 2:
             step = int(step_str.groups()[1])
             if step > max_step:
@@ -56,6 +61,7 @@ def get_model_filenames(model_dir):
     return meta_file, ckpt_file
 
 def main(args):
+    """This is a function that reads test data."""
     with tf.Graph().as_default():
         with tf.Session() as sess:
             # prepare validate datasets
@@ -64,19 +70,24 @@ def main(args):
             # Load the modelc
             load_model(args.model)
 
-            # Get input and output tensors, ignore phase_train_placeholder for it have default value.
+            # Get input and output tensors, ignore phase_train_placeholder
+            # for it have default value.
             inputs_placeholder = tf.get_default_graph().get_tensor_by_name("input:0")
 
-            feature_maps = tf.get_default_graph().get_tensor_by_name('MobileFaceNet/MobileFaceNet/Conv2d_4_InvResBlock_5/Conv/Conv2D:0')
+            feature_maps = tf.get_default_graph().\
+                get_tensor_by_name('MobileFaceNet/MobileFaceNet/'
+                                   'Conv2d_4_InvResBlock_5/Conv/Conv2D:0')
 
             test_labels = tf.placeholder(tf.int32, [None, 3], name='test_labels')
-            test_logits, _ = network(feature_maps=feature_maps, keep_prob=1.0, is_training=False, reuse=tf.AUTO_REUSE)
-            test_accuracy = calculate_accuracy(logit=test_logits, label=test_labels, name='test_accuracy')
+            test_logits, _ = network(feature_maps=feature_maps, keep_prob=1.0,
+                                     is_training=False, reuse=tf.AUTO_REUSE)
+            test_accuracy = calculate_accuracy(logit=test_logits, label=test_labels,
+                                               name='test_accuracy')
 
-            MODEL_PATH = './checkpoint/SR_model/'
+            model_path = './checkpoint/SR_model/'
             restore_saver = tf.train.Saver()
             tf.global_variables_initializer().run()
-            restore_saver.restore(sess, os.path.join(MODEL_PATH, 'SR_model_0.6233.ckpt'))
+            restore_saver.restore(sess, os.path.join(model_path, 'SR_model_0.6233.ckpt'))
 
             batch_size = 7
             test_iteration = len(test_x) // batch_size
@@ -106,7 +117,8 @@ def parse_arguments(argv):
     '''test parameters'''
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', type=str,
-                        help='Could be either a directory containing the meta_file and ckpt_file or a model protobuf (.pb) file',
+                        help='Could be either a directory containing the meta_file '
+                             'and ckpt_file or a model protobuf (.pb) file',
                         default='./checkpoint/FR_model')
     parser.add_argument('--image_size', default=[112, 112], help='the image size')
 

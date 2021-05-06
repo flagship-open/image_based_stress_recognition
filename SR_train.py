@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+"""This is a module that learns the stress recognition model."""
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -6,19 +8,20 @@ from __future__ import print_function
 import argparse
 import sys
 import re
-from SR_utils import *
-from SR_ResNet import *
+from sr_utils import *
+from sr_resnet import *
 
 
 def load_model(model):
+    """This is a function that loads the trained model."""
     # Check if the model is a model directory (containing a metagraph and a checkpoint file)
     #  or if it is a protobuf file with a frozen graph
     model_exp = os.path.expanduser(model)
-    if (os.path.isfile(model_exp)):
+    if os.path.isfile(model_exp):
         print('Model filename: %s' % model_exp)
-        with tf.gfile.FastGFile(model_exp, 'rb') as f:
+        with tf.gfile.FastGFile(model_exp, 'rb') as f_l:
             graph_def = tf.GraphDef()
-            graph_def.ParseFromString(f.read())
+            graph_def.ParseFromString(f_l.read())
             tf.import_graph_def(graph_def, name='')
     else:
         print('Model directory: %s' % model_exp)
@@ -32,12 +35,14 @@ def load_model(model):
 
 
 def get_model_filenames(model_dir):
+    """This is a function that gets the model's file name."""
     files = os.listdir(model_dir)
     meta_files = [s for s in files if s.endswith('.meta')]
     if len(meta_files) == 0:
         raise ValueError('No meta file found in the model directory (%s)' % model_dir)
-    elif len(meta_files) > 1:
-        raise ValueError('There should not be more than one meta file in the model directory (%s)' % model_dir)
+    if len(meta_files) > 1:
+        raise ValueError('There should not be more than one meta '
+                         'file in the model directory (%s)' % model_dir)
     meta_file = meta_files[0]
     ckpt = tf.train.get_checkpoint_state(model_dir)
     if ckpt and ckpt.model_checkpoint_path:
@@ -46,8 +51,8 @@ def get_model_filenames(model_dir):
 
     meta_files = [s for s in files if '.ckpt' in s]
     max_step = -1
-    for f in files:
-        step_str = re.match(r'(^model-[\w\- ]+.ckpt-(\d+))', f)
+    for file_path in files:
+        step_str = re.match(r'(^model-[\w\- ]+.ckpt-(\d+))', file_path)
         if step_str is not None and len(step_str.groups()) >= 2:
             step = int(step_str.groups()[1])
             if step > max_step:
@@ -56,6 +61,7 @@ def get_model_filenames(model_dir):
     return meta_file, ckpt_file
 
 def main(args):
+    """This is a function that trains a model with training data."""
     with tf.Graph().as_default():
         with tf.Session() as sess:
             # prepare validate datasets
@@ -64,10 +70,13 @@ def main(args):
             # Load the modelc
             load_model(args.model)
 
-            # Get input and output tensors, ignore phase_train_placeholder for it have default value.
+            # Get input and output tensors, ignore phase_train_placeholder
+            # for it have default value.
             inputs_placeholder = tf.get_default_graph().get_tensor_by_name("input:0")
 
-            feature_maps = tf.get_default_graph().get_tensor_by_name('MobileFaceNet/MobileFaceNet/Conv2d_4_InvResBlock_5/Conv/Conv2D:0')
+            feature_maps = tf.get_default_graph().\
+                get_tensor_by_name('MobileFaceNet/MobileFaceNet/'
+                                   'Conv2d_4_InvResBlock_5/Conv/Conv2D:0')
 
             feature_maps_r = tf.reshape(feature_maps, [-1, 3, 14, 14, 256])
             anchor_feature_maps = feature_maps_r[:, 0, :, :, :]
@@ -82,9 +91,12 @@ def main(args):
             anchor_logits, anchor_feature = network(feature_maps=anchor_feature_maps, keep_prob=0.5)
             pos_logits, pos_feature = network(feature_maps=pos_feature_maps, keep_prob=0.5)
             neg_logits, neg_feature = network(feature_maps=neg_feature_maps, keep_prob=0.5)
-            test_logits, _ = network(feature_maps=feature_maps, keep_prob=1.0, is_training=False, reuse=True)
-            train_accuracy = calculate_accuracy(logit=anchor_logits, label=anchor_labels, name='train_accuracy')
-            test_accuracy = calculate_accuracy(logit=test_logits, label=test_labels, name='test_accuracy')
+            test_logits, _ = network(feature_maps=feature_maps, keep_prob=1.0,
+                                     is_training=False, reuse=True)
+            train_accuracy = calculate_accuracy(logit=anchor_logits, label=anchor_labels,
+                                                name='train_accuracy')
+            test_accuracy = calculate_accuracy(logit=test_logits, label=test_labels,
+                                               name='test_accuracy')
 
             with tf.name_scope("retrain_loss"):
                 pos_pair_loss = tf.losses.mean_squared_error(anchor_feature, pos_feature)
@@ -99,7 +111,8 @@ def main(args):
 
             with tf.name_scope("retrain_op"):  # not shown in the book
                 optimizer = tf.train.GradientDescentOptimizer(learning_rate)  # not shown
-                train_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="retrain_net")
+                train_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,
+                                               scope="retrain_net")
                 train_op = optimizer.minimize(loss, var_list=train_vars)
 
             uninitialized_vars = []
@@ -112,7 +125,7 @@ def main(args):
             init_new_vars_op = tf.initialize_variables(uninitialized_vars)
             sess.run(init_new_vars_op)
 
-            MODEL_PATH = './checkpoint/SR_model/'
+            model_path = './checkpoint/SR_model/'
             new_saver = tf.train.Saver()
 
             batch_size = 7
@@ -142,16 +155,17 @@ def main(args):
                         learning_rate: epoch_lr
                     }
 
-                    _, train_accuracy_v, anchor_loss_v, pos_loss_v, neg_loss_v, pos_pair_loss_v, neg_pair_loss_v =\
-                        sess.run([train_op, train_accuracy, anchor_loss, pos_loss, neg_loss, pos_pair_loss,
-                                  neg_pair_loss], feed_dict=train_feed_dict)
+                    _, train_accuracy_v, anchor_loss_v, pos_loss_v, neg_loss_v, pos_pair_loss_v, \
+                    neg_pair_loss_v = sess.run([train_op, train_accuracy,
+                                                anchor_loss, pos_loss, neg_loss, pos_pair_loss,
+                                                neg_pair_loss], feed_dict=train_feed_dict)
 
                     if idx % 10 == 0:
                         # display training status
                         print('Epoch: [%2d][%4d/%4d] Anchor Loss %.4f Pos Loss %.4f Neg Loss %.4f '
                               'Pos Pair Loss %.4f Neg Pair Loss %.4f Prec %.4f\t'
-                            % (epoch, idx, train_iteration, anchor_loss_v, pos_loss_v, neg_loss_v, pos_pair_loss_v,
-                                    neg_pair_loss_v, train_accuracy_v))
+                            % (epoch, idx, train_iteration, anchor_loss_v, pos_loss_v, neg_loss_v,
+                               pos_pair_loss_v, neg_pair_loss_v, train_accuracy_v))
 
                 total_test_accuracy = 0
                 for idx in range(test_iteration):
@@ -178,14 +192,16 @@ def main(args):
                 # save model
                 if best_test_accuracy < total_test_accuracy:
                     best_test_accuracy = total_test_accuracy
-                    new_saver.save(sess, os.path.join(MODEL_PATH, 'SR_model_%2.4f.ckpt' % (best_test_accuracy)))
+                    new_saver.save(sess, os.path.join(model_path, 'SR_model_%2.4f.ckpt'
+                                                      % best_test_accuracy))
 
 
 def parse_arguments(argv):
     '''test parameters'''
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', type=str,
-                        help='Could be either a directory containing the meta_file and ckpt_file or a model protobuf (.pb) file',
+                        help='Could be either a directory containing the meta_file '
+                             'and ckpt_file or a model protobuf (.pb) file',
                         default='./checkpoint/FR_model')
     parser.add_argument('--image_size', default=[112, 112], help='the image size')
 
