@@ -61,22 +61,22 @@ pip install -r requirements.txt
 * 2가지 방법을 사용할 수 있다.
 
         1. command prompt를 이용하는 방법
-> * Step1. SR_server.py 파일의 아래 부분에 IP주소를 실행 환경에 맞게 설정한다.
+> * Step1. sr_server.py 파일의 아래 부분에 IP주소를 실행 환경에 맞게 설정한다.
 > * Step2. 서버에서 아래 명령을 실행한다. 
 > ```
-> python SR_server.py
+> python sr_server.py
 > ```
-> * Step3. SR_client.py 파일의 윗 부분에 IP주소를 실행 환경에 맞게 설정하고 테스트하고자 하는 비디오의 경로를 입력한다.
+> * Step3. sr_client.py 파일의 윗 부분에 IP주소를 실행 환경에 맞게 설정하고 테스트하고자 하는 비디오의 경로를 입력한다.
 > * Step4. 클라이언트에서 아래 명령을 실행한다. 
 > ```
-> python SR_client.py
+> python sr_client.py
 > ```
 
         2. Web 상에서 이용하는 방법
-> * Step1. SR_server_web.py 파일의 아래 부분에 IP주소를 실행 환경에 맞게 설정한다.
+> * Step1. sr_server_web.py 파일의 아래 부분에 IP주소를 실행 환경에 맞게 설정한다.
 > * Step2. 서버에서 아래 명령을 실행한다.
 > ```
-> python SR_server_web.py
+> python sr_server_web.py
 > ```
 > * Step3. 동일 컴퓨터에서 실행한다면 http://127.0.0.1:5000/, 다른 컴퓨터에서 실행한다면 http://IP주소:포트번호/에 접속한다.
 > * Step4. "Try it out"을 누른 후 나오는 화면에서 "video_path" 항목에 비디오 경로를 입력한 후 아래의 "Execute"를 누른다.
@@ -118,7 +118,7 @@ pip install -r requirements.txt
 
 > * Path
 > ```
-> 5Y-M1_2-image_based_stress_recognition/SR_server.py
+> 5Y-M1_2-image_based_stress_recognition/sr_server.py
 > ```
 
 > * JSON parameters are:
@@ -129,7 +129,7 @@ pip install -r requirements.txt
 
 > * Request
 > ```
-> POST 5Y-M1_2-image_based_stress_recognition/SR_server.py
+> POST 5Y-M1_2-image_based_stress_recognition/sr_server.py
 > data: {
 > 'video_path': 'F:/Python/5Y-M1_2-image_based_stress_recognition/Data/paulyongju@yonsei.ac.kr-2.mp4'
 > }
@@ -165,7 +165,7 @@ pip install -r requirements.txt
 > * `sr_test.py` - 학습한 모델을 테스트하는 파일
 > * `sr_train.py` - 모델을 학습할 때 사용하는 파일
 > * `sr_utils.py` - 모델을 학습 및 테스트할 때 사용하는 기타 함수들이 저장되어 있는 파일
-> * `sr_apitest_script.py` - API가 정상적으로 작동하는지 APITestData 내 Data로 Test하는 파일
+> * `sr_api_test_script.py` - API가 정상적으로 작동하는지 APITestData 내 Data로 Test하는 파일
 > * `sr_api_function.py` - 다른 API에 적용하기 쉽도록 pre-processing, model loading, feature extraction, prediction 기능을 가진 함수들을 모아놓은 파일
 
 ***
