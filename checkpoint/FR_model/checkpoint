@@ -1,8 +1,0 @@
-model_checkpoint_path: "MobileFaceNet_iter_588000.ckpt"
-all_model_checkpoint_paths: "MobileFaceNet_iter_576000.ckpt"
-all_model_checkpoint_paths: "MobileFaceNet_iter_578000.ckpt"
-all_model_checkpoint_paths: "MobileFaceNet_iter_580000.ckpt"
-all_model_checkpoint_paths: "MobileFaceNet_iter_582000.ckpt"
-all_model_checkpoint_paths: "MobileFaceNet_iter_584000.ckpt"
-all_model_checkpoint_paths: "MobileFaceNet_iter_586000.ckpt"
-all_model_checkpoint_paths: "MobileFaceNet_iter_588000.ckpt"
